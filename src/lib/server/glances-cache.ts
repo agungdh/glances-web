@@ -108,6 +108,7 @@ function run() {
 }
 
 function stopPoller() {
+	started = false;
 	if (pollTimer) {
 		clearTimeout(pollTimer);
 		pollTimer = null;
@@ -122,8 +123,9 @@ function startPoller() {
 }
 
 export function subscribeGlances(fn: (host: number, state: GlancesHostState) => void): () => void {
-	startPoller();
+	// Register the listener first so the initial poller run doesn't stop itself.
 	listeners.add(fn);
+	startPoller();
 	for (let host = 0; host < GLANCES_HOSTS.length; host++) {
 		try {
 			fn(host, getState(host));
