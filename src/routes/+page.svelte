@@ -5,7 +5,6 @@
 	import GpuCard from '$lib/components/GpuCard.svelte';
 	import MemCard from '$lib/components/MemCard.svelte';
 	import StorageCard from '$lib/components/StorageCard.svelte';
-	import TempCard from '$lib/components/TempCard.svelte';
 
 	let data = $state<DashboardData | null>(null);
 	let connected = $state(false);
@@ -121,13 +120,11 @@
 					hz={data.quicklook.cpu_hz}
 					hz_current={data.quicklook.cpu_hz_current}
 					cpu_name={data.quicklook.cpu_name}
+					sensors={data.sensors}
 				/>
 				<GpuCard gpus={data.gpu} />
 				<MemCard mem={data.mem} swap={data.swap} />
-				<StorageCard fs={data.fs} />
-				<div class="lg:col-span-2 xl:col-span-2">
-					<TempCard sensors={data.sensors} />
-				</div>
+				<StorageCard fs={data.fs} sensors={data.sensors} />
 			</main>
 		{/if}
 

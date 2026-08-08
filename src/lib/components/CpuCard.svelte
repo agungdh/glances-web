@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { CpuInfo, PerCpu, LoadInfo } from '$lib/api';
+	import type { CpuInfo, PerCpu, LoadInfo, SensorInfo } from '$lib/api';
 	import { formatClock } from '$lib/format';
 	import Gauge from './Gauge.svelte';
 	import Bar from './Bar.svelte';
 	import StatCard from './StatCard.svelte';
+	import TempBadge from './TempBadge.svelte';
 
 	interface Props {
 		cpu: CpuInfo;
@@ -12,15 +13,24 @@
 		hz: number;
 		hz_current: number;
 		cpu_name: string;
+		sensors?: SensorInfo[];
 	}
 
-	let { cpu, percpu, load, hz = 0, hz_current = 0, cpu_name = '' }: Props = $props();
+	let { cpu, percpu, load, hz = 0, hz_current = 0, cpu_name = '', sensors = [] }: Props = $props();
 
 	const accent = '#22d3ee';
 
 	function loadLabel(value: number, cores: number): string {
 		return `${value.toFixed(1)} (${Math.round((value / Math.max(1, cores)) * 100)}%)`;
 	}
+
+	const cpuTemps = $derived(
+		sensors.filter(
+			(s) => s.type.startsWith('temperature') && !/gigabyte|acpitz|Sensor/.test(s.label)
+		)
+	);
+	const packageTemp = $derived(cpuTemps.find((s) => /package|composite/i.test(s.label)));
+	const coreTemps = $derived(cpuTemps.filter((s) => /^core/i.test(s.label)));
 </script>
 
 <StatCard title="CPU" icon="⚙" {accent}>
@@ -58,4 +68,16 @@
 			<Bar label={`Core ${core.cpu_number}`} value={core.total} color={accent} />
 		{/each}
 	</div>
+	{#if cpuTemps.length > 0}
+		<div class="mt-4 border-t border-white/[0.06] pt-3">
+			<div class="flex flex-wrap items-center gap-2">
+				{#if packageTemp}
+					<TempBadge sensor={packageTemp} />
+				{/if}
+				{#each coreTemps as sensor (sensor.label)}
+					<TempBadge {sensor} compact />
+				{/each}
+			</div>
+		</div>
+	{/if}
 </StatCard>
