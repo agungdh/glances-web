@@ -43,7 +43,7 @@
 	const coreTempFor = $derived(
 		new Map(coreTemps.map((s) => [Number.parseInt(s.label.replace(/\D+/g, ''), 10), s]))
 	);
-	const compositeTemp = $derived(cpuTemps.find((s) => /^composite/i.test(s.label)));
+	const compositeTemp = $derived(cpuTemps.find((s) => /^package/i.test(s.label)));
 
 	// SMT/hyperthreading: sensor reports physical cores only (Core 0..phys-1), but
 	// percpu has logical threads. On Linux, SMT siblings are adjacent logical CPUs,
@@ -82,7 +82,7 @@
 							compositeTemp.critical
 						)}"
 					>
-						{compositeTemp.value}°C <span class="text-white/40">({compositeTemp.label})</span>
+						{compositeTemp.value}°C <span class="text-white/40">Package</span>
 					</p>
 				</div>
 			{/if}
