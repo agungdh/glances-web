@@ -7,25 +7,33 @@ export const GET: RequestHandler = async () => {
 	let unsubscribe: (() => void) | undefined;
 	let heartbeat: ReturnType<typeof setInterval> | undefined;
 
+	const cleanup = () => {
+		unsubscribe?.();
+		unsubscribe = undefined;
+		if (heartbeat) clearInterval(heartbeat);
+		heartbeat = undefined;
+	};
+
 	const stream = new ReadableStream({
 		start(controller) {
 			const enqueue = (event: string, data: unknown) => {
-				try {
-					controller.enqueue(
-						new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-					);
-				} catch {
-					// Stream closed (client disconnected) — nothing to do.
-				}
+				controller.enqueue(
+					new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+				);
 			};
 
 			const send = (host: number, state: GlancesHostState) => {
-				if (state.data) enqueue('snapshot', { host, data: state.data });
-				enqueue('status', {
-					host,
-					connected: state.error === null,
-					error: state.error ?? undefined
-				});
+				try {
+					if (state.data) enqueue('snapshot', { host, data: state.data });
+					enqueue('status', {
+						host,
+						connected: state.error === null,
+						error: state.error ?? undefined
+					});
+				} catch {
+					cleanup();
+					throw new Error('stream closed');
+				}
 			};
 
 			enqueue('hello', { connected: true });
@@ -35,13 +43,12 @@ export const GET: RequestHandler = async () => {
 				try {
 					controller.enqueue(new TextEncoder().encode(': ping\n\n'));
 				} catch {
-					// Stream closed — nothing to do.
+					cleanup();
 				}
 			}, HEARTBEAT_MS);
 		},
 		cancel() {
-			unsubscribe?.();
-			if (heartbeat) clearInterval(heartbeat);
+			cleanup();
 		}
 	});
 

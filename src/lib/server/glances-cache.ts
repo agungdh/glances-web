@@ -31,7 +31,14 @@ function getState(host: number): GlancesHostState {
 function notify(host: number) {
 	const state = states.get(host);
 	if (!state) return;
-	for (const fn of listeners) fn(host, state);
+	for (const fn of listeners) {
+		try {
+			fn(host, state);
+		} catch {
+			// Listener's connection is dead (stream closed) — drop it.
+			listeners.delete(fn);
+		}
+	}
 }
 
 async function pollHost(host: number) {
@@ -67,7 +74,15 @@ function startPoller() {
 export function subscribeGlances(fn: (host: number, state: GlancesHostState) => void): () => void {
 	startPoller();
 	listeners.add(fn);
-	for (let host = 0; host < GLANCES_HOSTS.length; host++) fn(host, getState(host));
+	for (let host = 0; host < GLANCES_HOSTS.length; host++) {
+		try {
+			fn(host, getState(host));
+		} catch {
+			// Connection already dead during the initial sync — drop it.
+			listeners.delete(fn);
+			break;
+		}
+	}
 	return () => {
 		listeners.delete(fn);
 	};
