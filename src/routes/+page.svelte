@@ -13,6 +13,8 @@
 	let lastUpdate = $state<Date | null>(null);
 	const REFRESH_MS = 2000;
 
+	let stopped = $state(false);
+
 	async function refresh() {
 		try {
 			data = await fetchDashboard();
@@ -22,14 +24,17 @@
 			connected = false;
 		} finally {
 			loading = false;
+			if (!stopped) timer = setTimeout(refresh, REFRESH_MS);
 		}
 	}
 
-	let timer: ReturnType<typeof setInterval> | undefined;
+	let timer: ReturnType<typeof setTimeout> | undefined;
 	$effect(() => {
 		refresh();
-		timer = setInterval(refresh, REFRESH_MS);
-		return () => clearInterval(timer);
+		return () => {
+			stopped = true;
+			clearTimeout(timer);
+		};
 	});
 
 	function parseUptime(uptime: string): string {
