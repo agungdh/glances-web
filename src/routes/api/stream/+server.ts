@@ -1,15 +1,9 @@
-import { GLANCES_HOSTS } from '$lib/env';
 import { subscribeGlances, type GlancesHostState } from '$lib/server/glances-cache';
 import type { RequestHandler } from './$types';
 
 const HEARTBEAT_MS = 15000;
 
-export const GET: RequestHandler = async ({ url }) => {
-	const rawIndex = Number.parseInt(url.searchParams.get('host') ?? '', 10);
-	const hostIndex = Number.isNaN(rawIndex)
-		? 0
-		: Math.min(Math.max(rawIndex, 0), GLANCES_HOSTS.length - 1);
-
+export const GET: RequestHandler = async () => {
 	let unsubscribe: (() => void) | undefined;
 	let heartbeat: ReturnType<typeof setInterval> | undefined;
 
@@ -25,16 +19,17 @@ export const GET: RequestHandler = async ({ url }) => {
 				}
 			};
 
-			const send = (state: GlancesHostState) => {
-				if (state.data) enqueue('snapshot', state.data);
+			const send = (host: number, state: GlancesHostState) => {
+				if (state.data) enqueue('snapshot', { host, data: state.data });
 				enqueue('status', {
+					host,
 					connected: state.error === null,
 					error: state.error ?? undefined
 				});
 			};
 
-			enqueue('hello', { host: hostIndex, connected: true });
-			unsubscribe = subscribeGlances(hostIndex, send);
+			enqueue('hello', { connected: true });
+			unsubscribe = subscribeGlances(send);
 
 			heartbeat = setInterval(() => {
 				try {

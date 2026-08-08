@@ -1,50 +1,68 @@
 <script lang="ts">
-	import { mapAllResponse, type DashboardData } from '$lib/api';
+	import { mapAllResponse, type DashboardData, type AllResponse } from '$lib/api';
 	import { GLANCES_HOSTS, hostUrl } from '$lib/env';
 	import CpuCard from '$lib/components/CpuCard.svelte';
 	import GpuCard from '$lib/components/GpuCard.svelte';
 	import MemCard from '$lib/components/MemCard.svelte';
 	import StorageCard from '$lib/components/StorageCard.svelte';
 
-	let data = $state<DashboardData | null>(null);
-	let status = $state<'connecting' | 'live' | 'reconnecting' | 'offline'>('connecting');
-	let lastUpdate = $state<Date | null>(null);
-	let errorMsg = $state('');
+	interface HostState {
+		data: DashboardData | null;
+		error: string | null;
+		lastUpdate: Date | null;
+	}
+
+	let hosts = $state<HostState[]>(
+		GLANCES_HOSTS.map(() => ({ data: null, error: null, lastUpdate: null }))
+	);
 	let selectedHost = $state(0);
+	let streamOpen = $state(false);
 	let hostnames = $state<string[]>(new Array(GLANCES_HOSTS.length).fill(''));
 
 	let now = $state(new Date());
 
-	$effect(() => {
-		const es = new EventSource('/api/stream?host=' + selectedHost);
+	let data = $derived(hosts[selectedHost].data);
+	let errorMsg = $derived(hosts[selectedHost].error ?? '');
+	let lastUpdate = $derived(hosts[selectedHost].lastUpdate);
+	let status = $derived.by((): 'connecting' | 'live' | 'reconnecting' | 'offline' => {
+		if (!streamOpen) return data ? 'reconnecting' : 'offline';
+		if (errorMsg) return data ? 'reconnecting' : 'offline';
+		if (data) return 'live';
+		return 'connecting';
+	});
 
-		const goLive = () => {
-			status = 'live';
-			errorMsg = '';
-		};
+	$effect(() => {
+		const es = new EventSource('/api/stream');
 
 		es.addEventListener('snapshot', (event) => {
-			data = mapAllResponse(JSON.parse((event as MessageEvent).data));
-			hostnames[selectedHost] = data.system.hostname;
-			lastUpdate = new Date();
-			goLive();
+			const { host, data } = JSON.parse((event as MessageEvent).data) as {
+				host: number;
+				data: AllResponse;
+			};
+			const d = mapAllResponse(data);
+			hosts[host] = { data: d, error: null, lastUpdate: new Date() };
+			hostnames[host] = d.system.hostname;
 		});
 
 		es.addEventListener('status', (event) => {
 			const s = JSON.parse((event as MessageEvent).data) as {
+				host: number;
 				connected: boolean;
 				error?: string;
 			};
-			if (s.error) errorMsg = s.error;
-			if (!s.connected) status = data ? 'reconnecting' : 'offline';
+			hosts[s.host] = {
+				data: hosts[s.host].data,
+				error: s.connected ? null : (s.error ?? 'unknown error'),
+				lastUpdate: hosts[s.host].lastUpdate
+			};
 		});
 
-		es.addEventListener('hello', goLive);
-
-		es.onopen = goLive;
+		es.onopen = () => {
+			streamOpen = true;
+		};
 
 		es.onerror = () => {
-			status = data ? 'reconnecting' : 'offline';
+			streamOpen = false;
 		};
 
 		const tick = setInterval(() => {
@@ -59,10 +77,6 @@
 
 	function selectHost(index: number) {
 		selectedHost = index;
-		data = null;
-		status = 'connecting';
-		errorMsg = '';
-		lastUpdate = null;
 	}
 
 	function hostLabel(i: number): string {

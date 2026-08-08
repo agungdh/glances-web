@@ -15,7 +15,7 @@ export interface GlancesHostState {
 }
 
 const states = new Map<number, GlancesHostState>();
-const listeners = new Map<number, Set<(state: GlancesHostState) => void>>();
+const listeners = new Set<(host: number, state: GlancesHostState) => void>();
 const inflight = new Set<number>();
 let started = false;
 
@@ -31,7 +31,7 @@ function getState(host: number): GlancesHostState {
 function notify(host: number) {
 	const state = states.get(host);
 	if (!state) return;
-	for (const fn of listeners.get(host) ?? []) fn(state);
+	for (const fn of listeners) fn(host, state);
 }
 
 async function pollHost(host: number) {
@@ -64,17 +64,11 @@ function startPoller() {
 	setInterval(tick, POLL_MS);
 }
 
-export function getGlancesState(host: number): GlancesHostState {
+export function subscribeGlances(fn: (host: number, state: GlancesHostState) => void): () => void {
 	startPoller();
-	return getState(host);
-}
-
-export function subscribeGlances(host: number, fn: (state: GlancesHostState) => void): () => void {
-	startPoller();
-	if (!listeners.has(host)) listeners.set(host, new Set());
-	listeners.get(host)!.add(fn);
-	fn(getState(host));
+	listeners.add(fn);
+	for (let host = 0; host < GLANCES_HOSTS.length; host++) fn(host, getState(host));
 	return () => {
-		listeners.get(host)?.delete(fn);
+		listeners.delete(fn);
 	};
 }
