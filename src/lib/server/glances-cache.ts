@@ -108,17 +108,20 @@ function run() {
 }
 
 function stopPoller() {
+	if (!started) return;
 	started = false;
 	if (pollTimer) {
 		clearTimeout(pollTimer);
 		pollTimer = null;
 	}
+	console.log('[glances-cache] poller stopped (no listeners)');
 }
 
 function startPoller() {
 	if (started) return;
 	started = true;
 	for (let host = 0; host < GLANCES_HOSTS.length; host++) nextPollAt.set(host, 0);
+	console.log('[glances-cache] poller started');
 	run();
 }
 
