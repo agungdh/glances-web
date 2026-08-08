@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { formatBytes, formatClock } from './format';
+import { formatBytes, formatClock, formatRate } from './format';
 
 describe('formatBytes', () => {
 	it('returns 0 B for zero and falsy input', () => {
@@ -33,5 +33,18 @@ describe('formatClock', () => {
 	it('formats hz as GHz', () => {
 		expect(formatClock(3.4e9)).toBe('3.4 GHz');
 		expect(formatClock(1.2e9)).toBe('1.2 GHz');
+	});
+});
+
+describe('formatRate', () => {
+	it('returns 0 B/s for zero and negative rates', () => {
+		expect(formatRate(0)).toBe('0 B/s');
+		expect(formatRate(-10)).toBe('0 B/s');
+	});
+
+	it('formats rates with a /s suffix', () => {
+		expect(formatRate(512)).toBe('512 B/s');
+		expect(formatRate(472539)).toBe('461.5 KB/s');
+		expect(formatRate(1024 ** 2)).toBe('1.0 MB/s');
 	});
 });

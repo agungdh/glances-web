@@ -30,7 +30,47 @@ const full: AllResponse = {
 		cpu_hz: 2e9,
 		cpu_phys_core: 4,
 		cpu_log_core: 8
-	}
+	},
+	network: [
+		{
+			interface_name: 'enp3s0',
+			speed: 1e9,
+			bytes_recv: 100,
+			bytes_sent: 50,
+			bytes_recv_rate_per_sec: 10,
+			bytes_sent_rate_per_sec: 5
+		}
+	],
+	diskio: [
+		{
+			disk_name: 'sda',
+			read_bytes: 100,
+			write_bytes: 50,
+			read_bytes_rate_per_sec: 10,
+			write_bytes_rate_per_sec: 5
+		}
+	],
+	processlist: [
+		{ pid: 1, name: 'init', username: 'root', cpu_percent: 1.5, memory_percent: 0.5, status: 'S' }
+	],
+	processcount: { total: 100, running: 2, sleeping: 90, thread: 400 },
+	containers: [
+		{
+			name: 'redis',
+			status: 'running',
+			cpu_percent: 1,
+			memory_usage: 1024,
+			memory_limit: 2048,
+			network_rx: 10,
+			network_tx: 5,
+			uptime: '2 hours',
+			image: ['redis:latest'],
+			ports: '6379/tcp'
+		}
+	],
+	alert: [{ level: 'critical', name: 'CPU', message: 'high load' }],
+	ports: [{ host: 'localhost', port: 8080, description: 'web', status: 0.001, rtt_warning: 0.5 }],
+	amps: [{ name: 'Nginx', result: 1, count: 2, countmin: 1, countmax: 4 }]
 };
 
 describe('mapAllResponse', () => {
@@ -47,6 +87,14 @@ describe('mapAllResponse', () => {
 		expect(d.gpu).toEqual([]);
 		expect(d.sensors).toEqual([]);
 		expect(d.percpu).toEqual([]);
+		expect(d.network).toEqual([]);
+		expect(d.diskio).toEqual([]);
+		expect(d.processlist).toEqual([]);
+		expect(d.containers).toEqual([]);
+		expect(d.alert).toEqual([]);
+		expect(d.ports).toEqual([]);
+		expect(d.amps).toEqual([]);
+		expect(d.processcount.total).toBe(0);
 		expect(d.uptime).toBe('');
 		expect(d.cpu.total).toBe(0);
 		expect(d.system.hostname).toBe('');
@@ -59,5 +107,18 @@ describe('mapAllResponse', () => {
 		expect(d.cpu.total).toBe(10);
 		expect(d.fs).toEqual([]);
 		expect(d.swap.total).toBe(0);
+	});
+
+	it('maps all new monitoring sections', () => {
+		const d = mapAllResponse(full);
+		expect(d.network).toHaveLength(1);
+		expect(d.network[0].interface_name).toBe('enp3s0');
+		expect(d.diskio[0].disk_name).toBe('sda');
+		expect(d.processlist[0].pid).toBe(1);
+		expect(d.processcount.total).toBe(100);
+		expect(d.containers[0].name).toBe('redis');
+		expect(d.alert[0].level).toBe('critical');
+		expect(d.ports[0].port).toBe(8080);
+		expect(d.amps[0].result).toBe(1);
 	});
 });

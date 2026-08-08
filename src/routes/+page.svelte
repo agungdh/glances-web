@@ -5,6 +5,14 @@
 	import GpuCard from '$lib/components/GpuCard.svelte';
 	import MemCard from '$lib/components/MemCard.svelte';
 	import StorageCard from '$lib/components/StorageCard.svelte';
+	import NetworkCard from '$lib/components/NetworkCard.svelte';
+	import DiskIoCard from '$lib/components/DiskIoCard.svelte';
+	import ProcessesCard from '$lib/components/ProcessesCard.svelte';
+	import ContainersCard from '$lib/components/ContainersCard.svelte';
+	import SensorsCard from '$lib/components/SensorsCard.svelte';
+	import AlertsCard from '$lib/components/AlertsCard.svelte';
+	import PortsCard from '$lib/components/PortsCard.svelte';
+	import AmpsCard from '$lib/components/AmpsCard.svelte';
 
 	interface HostState {
 		data: DashboardData | null;
@@ -214,6 +222,23 @@
 				<div class="lg:col-span-2 xl:col-span-3">
 					<StorageCard fs={data.fs} sensors={data.sensors} />
 				</div>
+			</main>
+
+			<div class="my-8 flex items-center gap-4">
+				<div class="h-px flex-1 bg-gradient-to-r from-transparent via-white/15 to-white/5"></div>
+				<p class="text-[11px] tracking-[0.25em] text-white/40 uppercase">More Monitoring</p>
+				<div class="h-px flex-1 bg-gradient-to-l from-transparent via-white/15 to-white/5"></div>
+			</div>
+
+			<main class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+				<NetworkCard network={data.network} />
+				<DiskIoCard diskio={data.diskio} />
+				<ProcessesCard processlist={data.processlist} processcount={data.processcount} />
+				<ContainersCard containers={data.containers} />
+				<SensorsCard sensors={data.sensors} />
+				<AlertsCard alert={data.alert} />
+				<PortsCard ports={data.ports} />
+				<AmpsCard amps={data.amps} />
 			</main>
 		{/if}
 	</div>

@@ -78,6 +78,75 @@ export interface QuicklookInfo {
 	cpu_log_core: number;
 }
 
+export interface NetworkInfo {
+	interface_name: string;
+	speed: number;
+	bytes_recv: number;
+	bytes_sent: number;
+	bytes_recv_rate_per_sec: number;
+	bytes_sent_rate_per_sec: number;
+}
+
+export interface DiskIoInfo {
+	disk_name: string;
+	read_bytes: number;
+	write_bytes: number;
+	read_bytes_rate_per_sec: number;
+	write_bytes_rate_per_sec: number;
+}
+
+export interface ProcessInfo {
+	pid: number | string;
+	name: string;
+	username: string;
+	cpu_percent: number;
+	memory_percent: number;
+	status: string;
+}
+
+export interface ProcessCountInfo {
+	total: number;
+	running: number;
+	sleeping: number;
+	thread: number;
+}
+
+export interface ContainerInfo {
+	name: string;
+	status: string;
+	cpu_percent: number;
+	memory_usage: number;
+	memory_limit: number;
+	network_rx: number;
+	network_tx: number;
+	uptime: string;
+	image: string[];
+	ports: string;
+}
+
+export interface AlertInfo {
+	level: string;
+	name: string;
+	message: string;
+}
+
+export interface PortInfo {
+	indice?: string;
+	host: string;
+	port: number;
+	description: string;
+	status: number;
+	rtt_warning: number | null;
+}
+
+export interface AmpInfo {
+	name: string;
+	result: number | null;
+	count: number;
+	countmin: number | null;
+	countmax: number | null;
+}
+
 export interface DashboardData {
 	cpu: CpuInfo;
 	percpu: PerCpu[];
@@ -90,6 +159,14 @@ export interface DashboardData {
 	load: LoadInfo;
 	uptime: string;
 	quicklook: QuicklookInfo;
+	network: NetworkInfo[];
+	diskio: DiskIoInfo[];
+	processlist: ProcessInfo[];
+	processcount: ProcessCountInfo;
+	containers: ContainerInfo[];
+	alert: AlertInfo[];
+	ports: PortInfo[];
+	amps: AmpInfo[];
 }
 
 export interface AllResponse {
@@ -104,6 +181,14 @@ export interface AllResponse {
 	load: LoadInfo;
 	uptime: string;
 	quicklook: QuicklookInfo;
+	network: NetworkInfo[];
+	diskio: DiskIoInfo[];
+	processlist: ProcessInfo[];
+	processcount: ProcessCountInfo;
+	containers: ContainerInfo[];
+	alert: AlertInfo[];
+	ports: PortInfo[];
+	amps: AmpInfo[];
 }
 
 export function mapAllResponse(data: Partial<AllResponse>): DashboardData {
@@ -124,6 +209,14 @@ export function mapAllResponse(data: Partial<AllResponse>): DashboardData {
 			cpu_hz: 0,
 			cpu_phys_core: 0,
 			cpu_log_core: 0
-		}
+		},
+		network: data.network ?? [],
+		diskio: data.diskio ?? [],
+		processlist: data.processlist ?? [],
+		processcount: data.processcount ?? { total: 0, running: 0, sleeping: 0, thread: 0 },
+		containers: data.containers ?? [],
+		alert: data.alert ?? [],
+		ports: data.ports ?? [],
+		amps: data.amps ?? []
 	};
 }

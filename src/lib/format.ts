@@ -9,3 +9,8 @@ export function formatClock(hz: number): string {
 	if (!hz) return '—';
 	return `${(hz / 1e9).toFixed(1)} GHz`;
 }
+
+export function formatRate(bytesPerSec: number): string {
+	if (!bytesPerSec || bytesPerSec <= 0) return '0 B/s';
+	return `${formatBytes(bytesPerSec)}/s`;
+}
