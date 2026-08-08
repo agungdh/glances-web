@@ -211,9 +211,5 @@
 				<StorageCard fs={data.fs} sensors={data.sensors} />
 			</main>
 		{/if}
-
-		<footer class="mt-8 text-center text-[11px] text-white/25">
-			glances-web · live SSE stream · API {hostUrl(selectedHost)}
-		</footer>
 	</div>
 </div>
