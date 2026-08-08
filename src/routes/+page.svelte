@@ -10,6 +10,9 @@
 	let connected = $state(false);
 	let loading = $state(true);
 	let lastUpdate = $state<Date | null>(null);
+	let errorMsg = $state('');
+
+	let now = $state(new Date());
 
 	$effect(() => {
 		const es = new EventSource('/api/stream');
@@ -19,11 +22,21 @@
 			connected = true;
 			lastUpdate = new Date();
 			loading = false;
+			errorMsg = '';
 		});
 
 		es.addEventListener('status', (event) => {
-			const status = JSON.parse((event as MessageEvent).data) as { connected: boolean };
+			const status = JSON.parse((event as MessageEvent).data) as {
+				connected: boolean;
+				error?: string;
+			};
 			connected = status.connected;
+			loading = false;
+			if (status.error) errorMsg = status.error;
+		});
+
+		es.addEventListener('hello', () => {
+			connected = true;
 			loading = false;
 		});
 
@@ -32,8 +45,13 @@
 			loading = false;
 		};
 
+		const tick = setInterval(() => {
+			now = new Date();
+		}, 1000);
+
 		return () => {
 			es.close();
+			clearInterval(tick);
 		};
 	});
 
@@ -43,6 +61,16 @@
 		if (parts.length !== 3 || parts.some((p) => Number.isNaN(p))) return uptime;
 		const [h, m, s] = parts;
 		return `${h}h ${m}m ${s}s`;
+	}
+
+	function timeAgo(date: Date | null): string {
+		if (!date) return '—';
+		const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+		if (seconds < 5) return 'just now';
+		if (seconds < 60) return `${seconds}s ago`;
+		const minutes = Math.floor(seconds / 60);
+		if (minutes < 60) return `${minutes}m ago`;
+		return `${Math.floor(minutes / 60)}h ${minutes % 60}m ago`;
 	}
 </script>
 
@@ -75,9 +103,7 @@
 			<div class="flex items-center gap-4 text-xs text-white/50">
 				{#if data}
 					<span class="hidden sm:inline">up {parseUptime(data.uptime)}</span>
-					<span class="hidden md:inline">
-						last update {lastUpdate ? lastUpdate.toLocaleTimeString() : '—'}
-					</span>
+					<span class="hidden md:inline">last update {timeAgo(lastUpdate)}</span>
 				{/if}
 				<span
 					class={[
@@ -111,6 +137,9 @@
 					Make sure <code class="rounded bg-black/30 px-1.5 py-0.5">glances -w</code> is running and
 					the API is reachable at {GLANCES_URL}.
 				</p>
+				{#if errorMsg}
+					<p class="mt-3 text-xs text-red-200/50">({errorMsg})</p>
+				{/if}
 			</div>
 		{:else}
 			<main class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">

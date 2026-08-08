@@ -1,11 +1,17 @@
+import { env } from '$env/dynamic/private';
 import { GLANCES_URL } from '$lib/env';
 import type { AllResponse } from '$lib/api';
 import type { RequestHandler } from './$types';
 
-const POLL_MS = 2000;
+const DEFAULT_POLL_MS = 2000;
+const FETCH_TIMEOUT_MS = 5000;
+const HEARTBEAT_MS = 15000;
+
+const POLL_MS = Math.max(500, Number.parseInt(env.GLANCES_POLL_MS ?? '', 10) || DEFAULT_POLL_MS);
 
 export const GET: RequestHandler = async () => {
 	let timer: ReturnType<typeof setInterval> | undefined;
+	let heartbeat: ReturnType<typeof setInterval> | undefined;
 
 	const stream = new ReadableStream({
 		start(controller) {
@@ -25,7 +31,9 @@ export const GET: RequestHandler = async () => {
 				if (polling) return;
 				polling = true;
 				try {
-					const res = await fetch(`${GLANCES_URL}/all`);
+					const res = await fetch(`${GLANCES_URL}/all`, {
+						signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+					});
 					if (!res.ok) throw new Error(`Glances ${res.status}`);
 					const data = (await res.json()) as AllResponse;
 					enqueue('snapshot', data);
@@ -42,9 +50,17 @@ export const GET: RequestHandler = async () => {
 			enqueue('hello', { connected: true });
 			poll();
 			timer = setInterval(poll, POLL_MS);
+			heartbeat = setInterval(() => {
+				try {
+					controller.enqueue(new TextEncoder().encode(': ping\n\n'));
+				} catch {
+					// Stream closed — nothing to do.
+				}
+			}, HEARTBEAT_MS);
 		},
 		cancel() {
 			if (timer) clearInterval(timer);
+			if (heartbeat) clearInterval(heartbeat);
 		}
 	});
 

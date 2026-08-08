@@ -1,5 +1,3 @@
-import { GLANCES_URL } from './env';
-
 export interface CpuInfo {
 	total: number;
 	user: number;
@@ -108,12 +106,6 @@ export interface AllResponse {
 	quicklook: QuicklookInfo;
 }
 
-async function getJson<T>(path: string): Promise<T> {
-	const res = await fetch(`${GLANCES_URL}/${path}`);
-	if (!res.ok) throw new Error(`Glances ${path}: ${res.status}`);
-	return res.json() as Promise<T>;
-}
-
 export function mapAllResponse(data: AllResponse): DashboardData {
 	return {
 		cpu: data.cpu,
@@ -128,10 +120,4 @@ export function mapAllResponse(data: AllResponse): DashboardData {
 		uptime: data.uptime,
 		quicklook: data.quicklook
 	};
-}
-
-export async function fetchDashboard(): Promise<DashboardData> {
-	// Fetch every metric in a single /all request so all values are consistent (same snapshot).
-	const data = await getJson<AllResponse>('all');
-	return mapAllResponse(data);
 }

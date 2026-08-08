@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { GpuInfo } from '$lib/api';
+	import { tempColor } from '$lib/temp';
 	import Gauge from './Gauge.svelte';
 	import StatCard from './StatCard.svelte';
 
@@ -10,13 +11,6 @@
 	let { gpus }: Props = $props();
 
 	const accent = '#a78bfa';
-
-	function tempColor(temp: number | null): string {
-		if (temp == null) return 'rgb(255 255 255 / 0.5)';
-		if (temp >= 85) return '#f87171';
-		if (temp >= 70) return '#fbbf24';
-		return '#34d399';
-	}
 </script>
 
 <StatCard title="GPU" icon="🎮" {accent}>
@@ -30,7 +24,7 @@
 						value={gpu.mem ?? 0}
 						label="VRAM"
 						sub={gpu.temperature != null ? `${gpu.temperature}°C` : '—'}
-						color={gpu.temperature != null ? tempColor(gpu.temperature) : accent}
+						color={gpu.temperature != null ? tempColor(gpu.temperature, null, null) : accent}
 						size={140}
 						stroke={12}
 					/>
@@ -39,7 +33,10 @@
 						<div class="mt-2 grid grid-cols-2 gap-3 text-sm">
 							<div>
 								<p class="text-[10px] tracking-wider text-white/40 uppercase">Temperature</p>
-								<p class="font-semibold tabular-nums" style="color: {tempColor(gpu.temperature)}">
+								<p
+									class="font-semibold tabular-nums"
+									style="color: {tempColor(gpu.temperature, null, null)}"
+								>
 									{gpu.temperature != null ? `${gpu.temperature}°C` : 'N/A'}
 								</p>
 							</div>

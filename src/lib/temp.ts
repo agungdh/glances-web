@@ -1,5 +1,14 @@
-export function tempColor(value: number, warning: number | null, critical: number | null): string {
-	const { warning: w, critical: c } = sanitizeThresholds(warning, critical);
+export function tempColor(
+	value: number | null,
+	warning: number | null,
+	critical: number | null,
+	defaults: { warning: number; critical: number } = { warning: 70, critical: 85 }
+): string {
+	if (value == null) return 'rgb(255 255 255 / 0.5)';
+	const { warning: w, critical: c } = sanitizeThresholds(
+		warning ?? defaults.warning,
+		critical ?? defaults.critical
+	);
 	if (c != null && value >= c) return '#ef4444';
 	if (w != null && value >= w) return '#f59e0b';
 	return '#4ade80';
