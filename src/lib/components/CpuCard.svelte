@@ -29,7 +29,10 @@
 			(s) => s.type.startsWith('temperature') && !/gigabyte|acpitz|Sensor/.test(s.label)
 		)
 	);
-	const packageTemp = $derived(cpuTemps.find((s) => /package|composite/i.test(s.label)));
+	const coreTemps = $derived(cpuTemps.filter((s) => /^core/i.test(s.label)));
+	const hottestCore = $derived(
+		coreTemps.length > 0 ? coreTemps.reduce((a, b) => (b.value > a.value ? b : a)) : undefined
+	);
 	const compositeTemp = $derived(cpuTemps.find((s) => /^composite/i.test(s.label)));
 </script>
 
@@ -40,9 +43,9 @@
 			label="Usage"
 			sub={formatClock(hz_current)}
 			color={accent}
-			side={packageTemp ? `${packageTemp.value}°C` : ''}
-			sideColor={packageTemp
-				? tempColor(packageTemp.value, packageTemp.warning, packageTemp.critical)
+			side={hottestCore ? `${hottestCore.value}°C` : ''}
+			sideColor={hottestCore
+				? tempColor(hottestCore.value, hottestCore.warning, hottestCore.critical)
 				: '#34d399'}
 		/>
 		<div class="min-w-0 flex-1 space-y-2 text-sm">
