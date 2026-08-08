@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { mapAllResponse, type DashboardData } from '$lib/api';
-	import { GLANCES_URL } from '$lib/env';
+	import { GLANCES_HOSTS, hostUrl } from '$lib/env';
 	import CpuCard from '$lib/components/CpuCard.svelte';
 	import GpuCard from '$lib/components/GpuCard.svelte';
 	import MemCard from '$lib/components/MemCard.svelte';
@@ -10,11 +10,13 @@
 	let status = $state<'connecting' | 'live' | 'reconnecting' | 'offline'>('connecting');
 	let lastUpdate = $state<Date | null>(null);
 	let errorMsg = $state('');
+	let selectedHost = $state(0);
+	let hostnames = $state<string[]>(new Array(GLANCES_HOSTS.length).fill(''));
 
 	let now = $state(new Date());
 
 	$effect(() => {
-		const es = new EventSource('/api/stream');
+		const es = new EventSource('/api/stream?host=' + selectedHost);
 
 		const goLive = () => {
 			status = 'live';
@@ -23,6 +25,7 @@
 
 		es.addEventListener('snapshot', (event) => {
 			data = mapAllResponse(JSON.parse((event as MessageEvent).data));
+			hostnames[selectedHost] = data.system.hostname;
 			lastUpdate = new Date();
 			goLive();
 		});
@@ -53,6 +56,18 @@
 			clearInterval(tick);
 		};
 	});
+
+	function selectHost(index: number) {
+		selectedHost = index;
+		data = null;
+		status = 'connecting';
+		errorMsg = '';
+		lastUpdate = null;
+	}
+
+	function hostLabel(i: number): string {
+		return hostnames[i] || 'Host ' + (i + 1);
+	}
 
 	function parseUptime(uptime: string): string {
 		if (!uptime) return '—';
@@ -99,6 +114,22 @@
 				</div>
 			</div>
 
+			<div class="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 p-1">
+				{#each GLANCES_HOSTS as _, i (i)}
+					<button
+						class={[
+							'rounded-lg border px-3 py-1 text-xs font-medium transition-colors',
+							i === selectedHost
+								? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-300'
+								: 'border-white/10 text-white/50 hover:bg-white/5 hover:text-white/80'
+						]}
+						onclick={() => selectHost(i)}
+					>
+						{hostLabel(i)}
+					</button>
+				{/each}
+			</div>
+
 			<div class="flex items-center gap-4 text-xs text-white/50">
 				{#if data}
 					<span class="hidden sm:inline">up {parseUptime(data.uptime)}</span>
@@ -143,7 +174,7 @@
 				<p class="text-lg font-semibold text-red-300">Cannot reach Glances</p>
 				<p class="mt-1 text-sm text-red-200/70">
 					Make sure <code class="rounded bg-black/30 px-1.5 py-0.5">glances -w</code> is running and
-					the API is reachable at {GLANCES_URL}.
+					the API is reachable at {hostUrl(selectedHost)}.
 				</p>
 				{#if errorMsg}
 					<p class="mt-3 text-xs text-red-200/50">({errorMsg})</p>
@@ -168,7 +199,7 @@
 		{/if}
 
 		<footer class="mt-8 text-center text-[11px] text-white/25">
-			glances-web · live SSE stream · API {GLANCES_URL}
+			glances-web · live SSE stream · API {hostUrl(selectedHost)}
 		</footer>
 	</div>
 </div>

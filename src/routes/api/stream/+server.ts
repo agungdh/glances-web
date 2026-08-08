@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/private';
-import { GLANCES_URL } from '$lib/env';
+import { GLANCES_HOSTS } from '$lib/env';
 import type { AllResponse } from '$lib/api';
 import type { RequestHandler } from './$types';
 
@@ -9,7 +9,12 @@ const HEARTBEAT_MS = 15000;
 
 const POLL_MS = Math.max(500, Number.parseInt(env.GLANCES_POLL_MS ?? '', 10) || DEFAULT_POLL_MS);
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ url }) => {
+	const rawIndex = Number.parseInt(url.searchParams.get('host') ?? '', 10);
+	const hostIndex = Number.isNaN(rawIndex)
+		? 0
+		: Math.min(Math.max(rawIndex, 0), GLANCES_HOSTS.length - 1);
+	const glancesUrl = GLANCES_HOSTS[hostIndex].url;
 	let timer: ReturnType<typeof setInterval> | undefined;
 	let heartbeat: ReturnType<typeof setInterval> | undefined;
 
@@ -31,7 +36,7 @@ export const GET: RequestHandler = async () => {
 				if (polling) return;
 				polling = true;
 				try {
-					const res = await fetch(`${GLANCES_URL}/all`, {
+					const res = await fetch(`${glancesUrl}/all`, {
 						signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
 					});
 					if (!res.ok) throw new Error(`Glances ${res.status}`);
@@ -47,7 +52,7 @@ export const GET: RequestHandler = async () => {
 				}
 			};
 
-			enqueue('hello', { connected: true });
+			enqueue('hello', { host: hostIndex, connected: true });
 			poll();
 			timer = setInterval(poll, POLL_MS);
 			heartbeat = setInterval(() => {
