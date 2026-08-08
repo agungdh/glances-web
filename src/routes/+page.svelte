@@ -17,7 +17,7 @@
 	);
 	let selectedHost = $state(0);
 	let streamOpen = $state(false);
-	let hostnames = $state<string[]>(new Array(GLANCES_HOSTS.length).fill(''));
+	let hostnames = $derived(hosts.map((h) => h.data?.system.hostname ?? ''));
 
 	let now = $state(new Date());
 
@@ -41,7 +41,6 @@
 			};
 			const d = mapAllResponse(data);
 			hosts[host] = { data: d, error: null, lastUpdate: new Date() };
-			hostnames[host] = d.system.hostname;
 		});
 
 		es.addEventListener('status', (event) => {
@@ -65,14 +64,18 @@
 			streamOpen = false;
 		};
 
+		return () => {
+			es.close();
+		};
+	});
+
+	// Only tick the clock (which re-renders the page) while there is data to display.
+	$effect(() => {
+		if (!data) return;
 		const tick = setInterval(() => {
 			now = new Date();
 		}, 1000);
-
-		return () => {
-			es.close();
-			clearInterval(tick);
-		};
+		return () => clearInterval(tick);
 	});
 
 	function selectHost(index: number) {

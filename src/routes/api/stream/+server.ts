@@ -36,6 +36,8 @@ export const GET: RequestHandler = async () => {
 				}
 			};
 
+			// Ask the client to wait 5s before reconnecting after a dropped stream.
+			controller.enqueue(new TextEncoder().encode('retry: 5000\n\n'));
 			enqueue('hello', { connected: true });
 			unsubscribe = subscribeGlances(send);
 

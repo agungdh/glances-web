@@ -106,18 +106,24 @@ export interface AllResponse {
 	quicklook: QuicklookInfo;
 }
 
-export function mapAllResponse(data: AllResponse): DashboardData {
+export function mapAllResponse(data: Partial<AllResponse>): DashboardData {
 	return {
-		cpu: data.cpu,
-		percpu: data.percpu,
-		mem: data.mem,
-		swap: data.memswap,
-		fs: data.fs,
-		gpu: data.gpu,
-		sensors: data.sensors,
-		system: data.system,
-		load: data.load,
-		uptime: data.uptime,
-		quicklook: data.quicklook
+		cpu: data.cpu ?? { total: 0, user: 0, system: 0, nice: 0, idle: 0, iowait: 0, cpucore: 0 },
+		percpu: data.percpu ?? [],
+		mem: data.mem ?? { total: 0, available: 0, percent: 0, used: 0, free: 0 },
+		swap: data.memswap ?? { total: 0, used: 0, free: 0, percent: 0 },
+		fs: data.fs ?? [],
+		gpu: data.gpu ?? [],
+		sensors: data.sensors ?? [],
+		system: data.system ?? { os_name: '', hostname: '', linux_distro: '', hr_name: '' },
+		load: data.load ?? { min1: 0, min5: 0, min15: 0, cpucore: 0 },
+		uptime: data.uptime ?? '',
+		quicklook: data.quicklook ?? {
+			cpu_name: '',
+			cpu_hz_current: 0,
+			cpu_hz: 0,
+			cpu_phys_core: 0,
+			cpu_log_core: 0
+		}
 	};
 }
