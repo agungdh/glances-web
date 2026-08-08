@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { GLANCES_HOSTS } from '$lib/env';
 import { logger } from '$lib/server/logger';
+import { logPoll, logPoller } from '$lib/server/poll-log';
 import type { AllResponse } from '$lib/api';
 
 const DEFAULT_POLL_MS = 2000;
@@ -59,18 +60,24 @@ async function pollHost(host: number) {
 	if (inflight.has(host)) return;
 	inflight.add(host);
 	const state = getState(host);
+	const startedAt = performance.now();
+	let bytes: number | undefined;
 	try {
 		const res = await fetch(`${GLANCES_HOSTS[host].url}/all`, {
 			signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
 		});
 		if (!res.ok) throw new Error(`Glances ${res.status}`);
+		bytes = Number.parseInt(res.headers.get('content-length') ?? '', 10) || undefined;
 		state.data = (await res.json()) as AllResponse;
 		state.error = null;
 		state.lastUpdate = Date.now();
 		failStreaks.set(host, 0);
+		logPoll({ type: 'poll', host, ok: true, ms: performance.now() - startedAt, bytes });
 	} catch (err) {
-		state.error = err instanceof Error ? err.message : 'unknown error';
+		const message = err instanceof Error ? err.message : 'unknown error';
+		state.error = message;
 		failStreaks.set(host, (failStreaks.get(host) ?? 0) + 1);
+		logPoll({ type: 'poll', host, ok: false, ms: performance.now() - startedAt, error: message });
 	} finally {
 		inflight.delete(host);
 		nextPollAt.set(host, Date.now() + pollDelayMs(host));
@@ -116,6 +123,7 @@ function stopPoller() {
 		pollTimer = null;
 	}
 	logger.info({ event: 'poller:stopped', listeners: 0 }, 'poller stopped (no listeners)');
+	logPoller('stopped', GLANCES_HOSTS.length);
 }
 
 function startPoller() {
@@ -123,6 +131,7 @@ function startPoller() {
 	started = true;
 	for (let host = 0; host < GLANCES_HOSTS.length; host++) nextPollAt.set(host, 0);
 	logger.info({ event: 'poller:started', hosts: GLANCES_HOSTS.length }, 'poller started');
+	logPoller('started', GLANCES_HOSTS.length);
 	run();
 }
 
