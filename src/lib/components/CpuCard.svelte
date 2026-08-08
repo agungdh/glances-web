@@ -109,11 +109,8 @@
 				? Math.max(1, Math.round(percpu.length / phys_core))
 				: 1}
 			{@const physical = Math.floor(core.cpu_number / threadsPerCore)}
-			{@const smtIdx = core.cpu_number % threadsPerCore}
 			<Bar
-				label={isHyperthreading && smtIdx > 0
-					? `Core ${physical} · SMT${smtIdx}`
-					: `Core ${physical}`}
+				label={`Core ${physical}`}
 				value={core.total}
 				color={accent}
 				hint={temp ? `${temp.value}°` : ''}
