@@ -208,7 +208,9 @@
 				/>
 				<GpuCard gpus={data.gpu} />
 				<MemCard mem={data.mem} swap={data.swap} />
-				<StorageCard fs={data.fs} sensors={data.sensors} />
+				<div class="lg:col-span-2 xl:col-span-3">
+					<StorageCard fs={data.fs} sensors={data.sensors} />
+				</div>
 			</main>
 		{/if}
 	</div>
