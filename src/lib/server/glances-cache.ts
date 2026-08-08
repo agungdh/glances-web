@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { GLANCES_HOSTS } from '$lib/env';
+import { logger } from '$lib/server/logger';
 import type { AllResponse } from '$lib/api';
 
 const DEFAULT_POLL_MS = 2000;
@@ -114,14 +115,14 @@ function stopPoller() {
 		clearTimeout(pollTimer);
 		pollTimer = null;
 	}
-	console.log('[glances-cache] poller stopped (no listeners)');
+	logger.info({ event: 'poller:stopped', listeners: 0 }, 'poller stopped (no listeners)');
 }
 
 function startPoller() {
 	if (started) return;
 	started = true;
 	for (let host = 0; host < GLANCES_HOSTS.length; host++) nextPollAt.set(host, 0);
-	console.log('[glances-cache] poller started');
+	logger.info({ event: 'poller:started', hosts: GLANCES_HOSTS.length }, 'poller started');
 	run();
 }
 
