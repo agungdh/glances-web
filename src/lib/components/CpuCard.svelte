@@ -82,7 +82,7 @@
 							compositeTemp.critical
 						)}"
 					>
-						{compositeTemp.value}°C <span class="text-white/40">Package</span>
+						{compositeTemp.value}°C
 					</p>
 				</div>
 			{/if}
