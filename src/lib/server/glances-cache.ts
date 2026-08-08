@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { GLANCES_HOSTS } from '$lib/env';
-import { logger } from '$lib/server/logger';
+import { credentialsFor } from '$lib/server/glances-auth';
 import { logPoll, logPoller } from '$lib/server/poll-log';
 import type { AllResponse } from '$lib/api';
 
@@ -62,8 +62,16 @@ async function pollHost(host: number) {
 	const state = getState(host);
 	const startedAt = performance.now();
 	let bytes: number | undefined;
+	const url = GLANCES_HOSTS[host].url;
+	const headers: Record<string, string> = {};
+	const cred = credentialsFor(url, env.GLANCES_CREDENTIALS ?? '');
+	if (cred) {
+		headers.Authorization =
+			'Basic ' + Buffer.from(`${cred.username}:${cred.password}`, 'utf8').toString('base64');
+	}
 	try {
-		const res = await fetch(`${GLANCES_HOSTS[host].url}/all`, {
+		const res = await fetch(`${url}/all`, {
+			headers,
 			signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
 		});
 		if (!res.ok) throw new Error(`Glances ${res.status}`);
@@ -122,7 +130,6 @@ function stopPoller() {
 		clearTimeout(pollTimer);
 		pollTimer = null;
 	}
-	logger.info({ event: 'poller:stopped', listeners: 0 }, 'poller stopped (no listeners)');
 	logPoller('stopped', GLANCES_HOSTS.length);
 }
 
@@ -130,7 +137,6 @@ function startPoller() {
 	if (started) return;
 	started = true;
 	for (let host = 0; host < GLANCES_HOSTS.length; host++) nextPollAt.set(host, 0);
-	logger.info({ event: 'poller:started', hosts: GLANCES_HOSTS.length }, 'poller started');
 	logPoller('started', GLANCES_HOSTS.length);
 	run();
 }

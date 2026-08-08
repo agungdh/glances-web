@@ -21,16 +21,20 @@ glances -w
 
 The API must be reachable at `http://<host>:61208/api/4`.
 
+If a Glances server is started with basic auth (`glances -w -u <user> -p <pass>`), configure its
+credentials via `GLANCES_CREDENTIALS` (server-side only — the password is never sent to the browser).
+
 ## Configuration
 
 Copy `.env.example` to `.env` and adjust:
 
-| Variable              | Description                                                               | Default                        |
-| --------------------- | ------------------------------------------------------------------------- | ------------------------------ |
-| `PUBLIC_GLANCES_URLS` | Comma-separated base URLs (each ending in `/api/4`) for the host switcher | `http://localhost:61208/api/4` |
-| `PUBLIC_GLANCES_URL`  | Single-host fallback used when `PUBLIC_GLANCES_URLS` is empty             | `http://localhost:61208/api/4` |
-| `PORT` / `HOST`       | Server listen address (read by the node adapter on `bun start`)           | `3000` / `127.0.0.1`           |
-| `GLANCES_POLL_MS`     | Server-side poll interval in ms (min 500)                                 | `2000`                         |
+| Variable              | Description                                                                  | Default                        |
+| --------------------- | ---------------------------------------------------------------------------- | ------------------------------ |
+| `PUBLIC_GLANCES_URLS` | Comma-separated base URLs (each ending in `/api/4`) for the host switcher    | `http://localhost:61208/api/4` |
+| `PUBLIC_GLANCES_URL`  | Single-host fallback used when `PUBLIC_GLANCES_URLS` is empty                | `http://localhost:61208/api/4` |
+| `PORT` / `HOST`       | Server listen address (read by the node adapter on `bun start`)              | `3000` / `127.0.0.1`           |
+| `GLANCES_POLL_MS`     | Server-side poll interval in ms (min 500)                                    | `2000`                         |
+| `GLANCES_CREDENTIALS` | Per-host basic auth, `url\|username\|password` comma-separated (server-only) | none                           |
 
 ## Development
 
