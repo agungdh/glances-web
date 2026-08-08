@@ -46,9 +46,12 @@
 	const compositeTemp = $derived(cpuTemps.find((s) => /^composite/i.test(s.label)));
 
 	// SMT/hyperthreading: sensor reports physical cores only (Core 0..phys-1), but
-	// percpu has logical threads. Map each thread to its physical core temp.
+	// percpu has logical threads. On Linux, SMT siblings are adjacent logical CPUs,
+	// e.g. 6 phys / 12 threads → Core 0 = CPU 0+1, Core 1 = CPU 2+3, ...
 	function threadTemp(thread: number): SensorInfo | undefined {
-		return phys_core > 0 ? coreTempFor.get(thread % phys_core) : coreTempFor.get(thread);
+		if (phys_core <= 0) return coreTempFor.get(thread);
+		const threadsPerCore = Math.max(1, Math.round(percpu.length / phys_core));
+		return coreTempFor.get(Math.floor(thread / threadsPerCore));
 	}
 
 	const isHyperthreading = $derived(phys_core > 0 && percpu.length > phys_core);
@@ -102,13 +105,15 @@
 	<div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
 		{#each percpu as core (core.cpu_number)}
 			{@const temp = threadTemp(core.cpu_number)}
-			{@const physical = isHyperthreading ? core.cpu_number % phys_core : core.cpu_number}
+			{@const threadsPerCore = isHyperthreading
+				? Math.max(1, Math.round(percpu.length / phys_core))
+				: 1}
+			{@const physical = Math.floor(core.cpu_number / threadsPerCore)}
+			{@const smtIdx = core.cpu_number % threadsPerCore}
 			<Bar
-				label={isHyperthreading
-					? core.cpu_number >= phys_core
-						? `Core ${physical} · SMT${core.cpu_number - phys_core + 1}`
-						: `Core ${core.cpu_number}`
-					: `Core ${core.cpu_number}`}
+				label={isHyperthreading && smtIdx > 0
+					? `Core ${physical} · SMT${smtIdx}`
+					: `Core ${physical}`}
 				value={core.total}
 				color={accent}
 				hint={temp ? `${temp.value}°` : ''}
