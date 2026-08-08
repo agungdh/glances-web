@@ -35,6 +35,8 @@ Copy `.env.example` to `.env` and adjust:
 | `PORT` / `HOST`       | Server listen address (read by the node adapter on `bun start`)              | `3000` / `127.0.0.1`           |
 | `GLANCES_POLL_MS`     | Server-side poll interval in ms (min 500)                                    | `2000`                         |
 | `GLANCES_CREDENTIALS` | Per-host basic auth, `url\|username\|password` comma-separated (server-only) | none                           |
+| `BASIC_AUTH_USERNAME` | HTTP Basic username protecting the dashboard + API (server-only)             | none (auth disabled)           |
+| `BASIC_AUTH_PASSWORD` | HTTP Basic password protecting the dashboard + API (server-only)             | none (auth disabled)           |
 
 ## Development
 
