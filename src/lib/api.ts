@@ -94,7 +94,7 @@ export interface DashboardData {
 	quicklook: QuicklookInfo;
 }
 
-interface AllResponse {
+export interface AllResponse {
 	cpu: CpuInfo;
 	percpu: PerCpu[];
 	mem: MemInfo;
@@ -114,9 +114,7 @@ async function getJson<T>(path: string): Promise<T> {
 	return res.json() as Promise<T>;
 }
 
-export async function fetchDashboard(): Promise<DashboardData> {
-	// Fetch every metric in a single /all request so all values are consistent (same snapshot).
-	const data = await getJson<AllResponse>('all');
+export function mapAllResponse(data: AllResponse): DashboardData {
 	return {
 		cpu: data.cpu,
 		percpu: data.percpu,
@@ -130,4 +128,10 @@ export async function fetchDashboard(): Promise<DashboardData> {
 		uptime: data.uptime,
 		quicklook: data.quicklook
 	};
+}
+
+export async function fetchDashboard(): Promise<DashboardData> {
+	// Fetch every metric in a single /all request so all values are consistent (same snapshot).
+	const data = await getJson<AllResponse>('all');
+	return mapAllResponse(data);
 }

@@ -1,5 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
-import adapter from '@sveltejs/adapter-static';
+import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
@@ -13,9 +13,8 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 
-			// SPA (client-side rendered) static build — a fallback page is generated
-			// for any URL not covered by a prerendered page.
-			adapter: adapter({ fallback: 'index.html' })
+			// Node adapter — the app is served by a Bun/Node server (bun build/index.js).
+			adapter: adapter()
 		})
 	]
 });

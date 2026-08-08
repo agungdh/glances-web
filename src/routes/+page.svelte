@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { fetchDashboard, type DashboardData } from '$lib/api';
+	import { mapAllResponse, type DashboardData } from '$lib/api';
 	import { GLANCES_URL } from '$lib/env';
 	import CpuCard from '$lib/components/CpuCard.svelte';
 	import GpuCard from '$lib/components/GpuCard.svelte';
@@ -10,29 +10,30 @@
 	let connected = $state(false);
 	let loading = $state(true);
 	let lastUpdate = $state<Date | null>(null);
-	const REFRESH_MS = 2000;
 
-	let stopped = $state(false);
+	$effect(() => {
+		const es = new EventSource('/api/stream');
 
-	async function refresh() {
-		try {
-			data = await fetchDashboard();
+		es.addEventListener('snapshot', (event) => {
+			data = mapAllResponse(JSON.parse((event as MessageEvent).data));
 			connected = true;
 			lastUpdate = new Date();
-		} catch {
-			connected = false;
-		} finally {
 			loading = false;
-			if (!stopped) timer = setTimeout(refresh, REFRESH_MS);
-		}
-	}
+		});
 
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	$effect(() => {
-		refresh();
+		es.addEventListener('status', (event) => {
+			const status = JSON.parse((event as MessageEvent).data) as { connected: boolean };
+			connected = status.connected;
+			loading = false;
+		});
+
+		es.onerror = () => {
+			connected = false;
+			loading = false;
+		};
+
 		return () => {
-			stopped = true;
-			clearTimeout(timer);
+			es.close();
 		};
 	});
 
@@ -130,7 +131,7 @@
 		{/if}
 
 		<footer class="mt-8 text-center text-[11px] text-white/25">
-			glances-web · polling every {(REFRESH_MS / 1000).toFixed(0)}s · API {GLANCES_URL}
+			glances-web · live SSE stream · API {GLANCES_URL}
 		</footer>
 	</div>
 </div>
