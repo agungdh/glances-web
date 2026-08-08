@@ -92,6 +92,20 @@ export interface DashboardData {
 	quicklook: QuicklookInfo;
 }
 
+interface AllResponse {
+	cpu: CpuInfo;
+	percpu: PerCpu[];
+	mem: MemInfo;
+	memswap: MemSwap;
+	fs: FsInfo[];
+	gpu: GpuInfo[];
+	sensors: SensorInfo[];
+	system: SystemInfo;
+	load: LoadInfo;
+	uptime: string;
+	quicklook: QuicklookInfo;
+}
+
 async function getJson<T>(path: string): Promise<T> {
 	const res = await fetch(`${GLANCES_URL}/${path}`);
 	if (!res.ok) throw new Error(`Glances ${path}: ${res.status}`);
@@ -99,20 +113,19 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export async function fetchDashboard(): Promise<DashboardData> {
-	const [cpu, percpu, mem, swap, fs, gpu, sensors, system, load, uptime, quicklook] =
-		await Promise.all([
-			getJson<CpuInfo>('cpu'),
-			getJson<PerCpu[]>('percpu'),
-			getJson<MemInfo>('mem'),
-			getJson<MemSwap>('memswap'),
-			getJson<FsInfo[]>('fs'),
-			getJson<GpuInfo[]>('gpu'),
-			getJson<SensorInfo[]>('sensors'),
-			getJson<SystemInfo>('system'),
-			getJson<LoadInfo>('load'),
-			getJson<string>('uptime'),
-			getJson<QuicklookInfo>('quicklook')
-		]);
-
-	return { cpu, percpu, mem, swap, fs, gpu, sensors, system, load, uptime, quicklook };
+	// Fetch every metric in a single /all request so all values are consistent (same snapshot).
+	const data = await getJson<AllResponse>('all');
+	return {
+		cpu: data.cpu,
+		percpu: data.percpu,
+		mem: data.mem,
+		swap: data.memswap,
+		fs: data.fs,
+		gpu: data.gpu,
+		sensors: data.sensors,
+		system: data.system,
+		load: data.load,
+		uptime: data.uptime,
+		quicklook: data.quicklook
+	};
 }
