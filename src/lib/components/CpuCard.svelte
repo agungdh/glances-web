@@ -105,12 +105,8 @@
 	<div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
 		{#each percpu as core (core.cpu_number)}
 			{@const temp = threadTemp(core.cpu_number)}
-			{@const threadsPerCore = isHyperthreading
-				? Math.max(1, Math.round(percpu.length / phys_core))
-				: 1}
-			{@const physical = Math.floor(core.cpu_number / threadsPerCore)}
 			<Bar
-				label={`Core ${physical}`}
+				label={`Thread ${core.cpu_number}`}
 				value={core.total}
 				color={accent}
 				hint={temp ? `${temp.value}°` : ''}
