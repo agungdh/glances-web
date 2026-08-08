@@ -76,6 +76,8 @@ export interface QuicklookInfo {
 	cpu_name: string;
 	cpu_hz_current: number;
 	cpu_hz: number;
+	cpu_phys_core: number;
+	cpu_log_core: number;
 }
 
 export interface DashboardData {

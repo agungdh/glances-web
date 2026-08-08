@@ -120,6 +120,7 @@
 					hz={data.quicklook.cpu_hz}
 					hz_current={data.quicklook.cpu_hz_current}
 					cpu_name={data.quicklook.cpu_name}
+					phys_core={data.quicklook.cpu_phys_core}
 					sensors={data.sensors}
 				/>
 				<GpuCard gpus={data.gpu} />

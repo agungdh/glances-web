@@ -13,10 +13,20 @@
 		hz: number;
 		hz_current: number;
 		cpu_name: string;
+		phys_core: number;
 		sensors?: SensorInfo[];
 	}
 
-	let { cpu, percpu, load, hz = 0, hz_current = 0, cpu_name = '', sensors = [] }: Props = $props();
+	let {
+		cpu,
+		percpu,
+		load,
+		hz = 0,
+		hz_current = 0,
+		cpu_name = '',
+		phys_core = 0,
+		sensors = []
+	}: Props = $props();
 
 	const accent = '#22d3ee';
 
@@ -34,6 +44,14 @@
 		new Map(coreTemps.map((s) => [Number.parseInt(s.label.replace(/\D+/g, ''), 10), s]))
 	);
 	const compositeTemp = $derived(cpuTemps.find((s) => /^composite/i.test(s.label)));
+
+	// SMT/hyperthreading: sensor reports physical cores only (Core 0..phys-1), but
+	// percpu has logical threads. Map each thread to its physical core temp.
+	function threadTemp(thread: number): SensorInfo | undefined {
+		return phys_core > 0 ? coreTempFor.get(thread % phys_core) : coreTempFor.get(thread);
+	}
+
+	const isHyperthreading = $derived(phys_core > 0 && percpu.length > phys_core);
 </script>
 
 <StatCard title="CPU" icon="⚙" {accent}>
@@ -83,9 +101,14 @@
 	</div>
 	<div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
 		{#each percpu as core (core.cpu_number)}
-			{@const temp = coreTempFor.get(core.cpu_number)}
+			{@const temp = threadTemp(core.cpu_number)}
+			{@const physical = isHyperthreading ? core.cpu_number % phys_core : core.cpu_number}
 			<Bar
-				label={`Core ${core.cpu_number}`}
+				label={isHyperthreading
+					? core.cpu_number >= phys_core
+						? `Core ${physical} · SMT${core.cpu_number - phys_core + 1}`
+						: `Core ${core.cpu_number}`
+					: `Core ${core.cpu_number}`}
 				value={core.total}
 				color={accent}
 				hint={temp ? `${temp.value}°` : ''}
