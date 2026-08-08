@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { CpuInfo, PerCpu, LoadInfo, SensorInfo } from '$lib/api';
 	import { formatClock } from '$lib/format';
+	import { tempColor } from '$lib/temp';
 	import Gauge from './Gauge.svelte';
 	import Bar from './Bar.svelte';
 	import StatCard from './StatCard.svelte';
-	import TempBadge from './TempBadge.svelte';
 
 	interface Props {
 		cpu: CpuInfo;
@@ -30,12 +30,21 @@
 		)
 	);
 	const packageTemp = $derived(cpuTemps.find((s) => /package|composite/i.test(s.label)));
-	const coreTemps = $derived(cpuTemps.filter((s) => /^core/i.test(s.label)));
+	const compositeTemp = $derived(cpuTemps.find((s) => /^composite/i.test(s.label)));
 </script>
 
 <StatCard title="CPU" icon="⚙" {accent}>
 	<div class="flex items-center justify-between gap-4">
-		<Gauge value={cpu.total} label="Usage" sub={formatClock(hz_current)} color={accent} />
+		<Gauge
+			value={cpu.total}
+			label="Usage"
+			sub={formatClock(hz_current)}
+			color={accent}
+			side={packageTemp ? `${packageTemp.value}°C` : ''}
+			sideColor={packageTemp
+				? tempColor(packageTemp.value, packageTemp.warning, packageTemp.critical)
+				: '#34d399'}
+		/>
 		<div class="min-w-0 flex-1 space-y-2 text-sm">
 			<div>
 				<p class="truncate text-[11px] tracking-wider text-white/40 uppercase">Model</p>
@@ -47,6 +56,21 @@
 					{formatClock(hz_current)} <span class="text-white/40">/ {formatClock(hz)}</span>
 				</p>
 			</div>
+			{#if compositeTemp}
+				<div>
+					<p class="text-[11px] tracking-wider text-white/40 uppercase">Temp</p>
+					<p
+						class="tabular-nums"
+						style="color: {tempColor(
+							compositeTemp.value,
+							compositeTemp.warning,
+							compositeTemp.critical
+						)}"
+					>
+						{compositeTemp.value}°C <span class="text-white/40">({compositeTemp.label})</span>
+					</p>
+				</div>
+			{/if}
 			<div class="grid grid-cols-3 gap-2 pt-1">
 				<div class="rounded-lg bg-white/[0.04] p-2 text-center">
 					<p class="text-[10px] text-white/40 uppercase">1m</p>
@@ -68,16 +92,4 @@
 			<Bar label={`Core ${core.cpu_number}`} value={core.total} color={accent} />
 		{/each}
 	</div>
-	{#if cpuTemps.length > 0}
-		<div class="mt-4 border-t border-white/[0.06] pt-3">
-			<div class="flex flex-wrap items-center gap-2">
-				{#if packageTemp}
-					<TempBadge sensor={packageTemp} />
-				{/if}
-				{#each coreTemps as sensor (sensor.label)}
-					<TempBadge {sensor} compact />
-				{/each}
-			</div>
-		</div>
-	{/if}
 </StatCard>

@@ -6,9 +6,20 @@
 		color?: string;
 		size?: number;
 		stroke?: number;
+		side?: string;
+		sideColor?: string;
 	}
 
-	let { value, label = '', sub = '', color = '#22d3ee', size = 180, stroke = 14 }: Props = $props();
+	let {
+		value,
+		label = '',
+		sub = '',
+		color = '#22d3ee',
+		size = 180,
+		stroke = 14,
+		side = '',
+		sideColor = '#34d399'
+	}: Props = $props();
 
 	const radius = $derived((size - stroke) / 2);
 	const circumference = $derived(2 * Math.PI * radius);
@@ -43,9 +54,11 @@
 		/>
 	</svg>
 	<div class="absolute flex flex-col items-center">
-		<span class="text-3xl font-bold tabular-nums" style="color: {color}">
-			{Math.round(clamped)}
-			<span class="text-base font-semibold text-white/50">%</span>
+		<span class="flex items-baseline text-3xl font-bold tabular-nums" style="color: {color}">
+			{Math.round(clamped)}%
+			{#if side}
+				<span class="ml-1.5 text-sm font-bold tabular-nums" style="color: {sideColor}">{side}</span>
+			{/if}
 		</span>
 		{#if label}
 			<span class="mt-0.5 text-[11px] font-medium tracking-wider text-white/60 uppercase"
