@@ -1,27 +1,20 @@
-import { env } from '$env/dynamic/private';
 import { GLANCES_HOSTS } from '$lib/env';
-import type { AllResponse } from '$lib/api';
+import { subscribeGlances, type GlancesHostState } from '$lib/server/glances-cache';
 import type { RequestHandler } from './$types';
 
-const DEFAULT_POLL_MS = 2000;
-const FETCH_TIMEOUT_MS = 5000;
 const HEARTBEAT_MS = 15000;
-
-const POLL_MS = Math.max(500, Number.parseInt(env.GLANCES_POLL_MS ?? '', 10) || DEFAULT_POLL_MS);
 
 export const GET: RequestHandler = async ({ url }) => {
 	const rawIndex = Number.parseInt(url.searchParams.get('host') ?? '', 10);
 	const hostIndex = Number.isNaN(rawIndex)
 		? 0
 		: Math.min(Math.max(rawIndex, 0), GLANCES_HOSTS.length - 1);
-	const glancesUrl = GLANCES_HOSTS[hostIndex].url;
-	let timer: ReturnType<typeof setInterval> | undefined;
+
+	let unsubscribe: (() => void) | undefined;
 	let heartbeat: ReturnType<typeof setInterval> | undefined;
 
 	const stream = new ReadableStream({
 		start(controller) {
-			let polling = false;
-
 			const enqueue = (event: string, data: unknown) => {
 				try {
 					controller.enqueue(
@@ -32,29 +25,17 @@ export const GET: RequestHandler = async ({ url }) => {
 				}
 			};
 
-			const poll = async () => {
-				if (polling) return;
-				polling = true;
-				try {
-					const res = await fetch(`${glancesUrl}/all`, {
-						signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
-					});
-					if (!res.ok) throw new Error(`Glances ${res.status}`);
-					const data = (await res.json()) as AllResponse;
-					enqueue('snapshot', data);
-				} catch (err) {
-					enqueue('status', {
-						connected: false,
-						error: err instanceof Error ? err.message : 'unknown error'
-					});
-				} finally {
-					polling = false;
-				}
+			const send = (state: GlancesHostState) => {
+				if (state.data) enqueue('snapshot', state.data);
+				enqueue('status', {
+					connected: state.error === null,
+					error: state.error ?? undefined
+				});
 			};
 
 			enqueue('hello', { host: hostIndex, connected: true });
-			poll();
-			timer = setInterval(poll, POLL_MS);
+			unsubscribe = subscribeGlances(hostIndex, send);
+
 			heartbeat = setInterval(() => {
 				try {
 					controller.enqueue(new TextEncoder().encode(': ping\n\n'));
@@ -64,7 +45,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			}, HEARTBEAT_MS);
 		},
 		cancel() {
-			if (timer) clearInterval(timer);
+			unsubscribe?.();
 			if (heartbeat) clearInterval(heartbeat);
 		}
 	});
