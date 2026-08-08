@@ -7,8 +7,7 @@
 	import StorageCard from '$lib/components/StorageCard.svelte';
 
 	let data = $state<DashboardData | null>(null);
-	let connected = $state(false);
-	let loading = $state(true);
+	let status = $state<'connecting' | 'live' | 'reconnecting' | 'offline'>('connecting');
 	let lastUpdate = $state<Date | null>(null);
 	let errorMsg = $state('');
 
@@ -17,32 +16,32 @@
 	$effect(() => {
 		const es = new EventSource('/api/stream');
 
+		const goLive = () => {
+			status = 'live';
+			errorMsg = '';
+		};
+
 		es.addEventListener('snapshot', (event) => {
 			data = mapAllResponse(JSON.parse((event as MessageEvent).data));
-			connected = true;
 			lastUpdate = new Date();
-			loading = false;
-			errorMsg = '';
+			goLive();
 		});
 
 		es.addEventListener('status', (event) => {
-			const status = JSON.parse((event as MessageEvent).data) as {
+			const s = JSON.parse((event as MessageEvent).data) as {
 				connected: boolean;
 				error?: string;
 			};
-			connected = status.connected;
-			loading = false;
-			if (status.error) errorMsg = status.error;
+			if (s.error) errorMsg = s.error;
+			if (!s.connected) status = data ? 'reconnecting' : 'offline';
 		});
 
-		es.addEventListener('hello', () => {
-			connected = true;
-			loading = false;
-		});
+		es.addEventListener('hello', goLive);
+
+		es.onopen = goLive;
 
 		es.onerror = () => {
-			connected = false;
-			loading = false;
+			status = data ? 'reconnecting' : 'offline';
 		};
 
 		const tick = setInterval(() => {
@@ -104,27 +103,36 @@
 				{#if data}
 					<span class="hidden sm:inline">up {parseUptime(data.uptime)}</span>
 					<span class="hidden md:inline">last update {timeAgo(lastUpdate)}</span>
+					{#if status === 'reconnecting'}
+						<span class="hidden text-amber-300/70 md:inline">reconnecting…</span>
+					{/if}
 				{/if}
 				<span
 					class={[
 						'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-medium',
-						connected
+						status === 'live'
 							? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
-							: 'border-red-400/30 bg-red-400/10 text-red-300'
+							: status === 'reconnecting'
+								? 'border-amber-400/30 bg-amber-400/10 text-amber-300'
+								: 'border-red-400/30 bg-red-400/10 text-red-300'
 					]}
 				>
 					<span
 						class={[
 							'h-1.5 w-1.5 rounded-full',
-							connected ? 'animate-pulse bg-emerald-400' : 'bg-red-400'
+							status === 'live'
+								? 'animate-pulse bg-emerald-400'
+								: status === 'reconnecting'
+									? 'animate-pulse bg-amber-400'
+									: 'bg-red-400'
 						]}
 					></span>
-					{connected ? 'LIVE' : 'OFFLINE'}
+					{status === 'live' ? 'LIVE' : status === 'reconnecting' ? 'RECONNECTING' : 'OFFLINE'}
 				</span>
 			</div>
 		</header>
 
-		{#if loading}
+		{#if !data && status === 'connecting'}
 			<div class="flex h-[60vh] items-center justify-center">
 				<div
 					class="h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-cyan-400"
