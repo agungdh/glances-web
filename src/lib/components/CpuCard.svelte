@@ -30,24 +30,15 @@
 		)
 	);
 	const coreTemps = $derived(cpuTemps.filter((s) => /^core/i.test(s.label)));
-	const hottestCore = $derived(
-		coreTemps.length > 0 ? coreTemps.reduce((a, b) => (b.value > a.value ? b : a)) : undefined
+	const coreTempFor = $derived(
+		new Map(coreTemps.map((s) => [Number.parseInt(s.label.replace(/\D+/g, ''), 10), s]))
 	);
 	const compositeTemp = $derived(cpuTemps.find((s) => /^composite/i.test(s.label)));
 </script>
 
 <StatCard title="CPU" icon="⚙" {accent}>
 	<div class="flex items-center justify-between gap-4">
-		<Gauge
-			value={cpu.total}
-			label="Usage"
-			sub={formatClock(hz_current)}
-			color={accent}
-			side={hottestCore ? `${hottestCore.value}°C` : ''}
-			sideColor={hottestCore
-				? tempColor(hottestCore.value, hottestCore.warning, hottestCore.critical)
-				: '#34d399'}
-		/>
+		<Gauge value={cpu.total} label="Usage" sub={formatClock(hz_current)} color={accent} />
 		<div class="min-w-0 flex-1 space-y-2 text-sm">
 			<div>
 				<p class="truncate text-[11px] tracking-wider text-white/40 uppercase">Model</p>
@@ -92,7 +83,14 @@
 	</div>
 	<div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
 		{#each percpu as core (core.cpu_number)}
-			<Bar label={`Core ${core.cpu_number}`} value={core.total} color={accent} />
+			{@const temp = coreTempFor.get(core.cpu_number)}
+			<Bar
+				label={`Core ${core.cpu_number}`}
+				value={core.total}
+				color={accent}
+				hint={temp ? `${temp.value}°` : ''}
+				hintColor={temp ? tempColor(temp.value, temp.warning, temp.critical) : ''}
+			/>
 		{/each}
 	</div>
 </StatCard>
